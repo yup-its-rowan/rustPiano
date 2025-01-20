@@ -70,6 +70,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             // Now we can safely assign to current_node
             current_node = next_node;
         }
+        
     }
 
 
