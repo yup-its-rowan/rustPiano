@@ -48,26 +48,32 @@ fn main() -> Result<(), Box<dyn Error>> {
     ];
 
     let nodes: Vec<Node> = Vec::new();
-    let root = Node::new(0);
-    let root = Arc::new(Mutex::new(root));
+    let root = Arc::new(Mutex::new(Node::new(-1)));
     
-    /* 
-    for pattern in note_patterns {
-        let mut current_node = root;
-        let first = true;
-        for note in pattern {
-            let mut current_node_lock = current_node.lock().unwrap();
-            
-            if (current_node_lock.get_rule(note).is_none()) {
-                let next_node = Node::new(note);
-                current_node_lock.add_rule(note, Arc::new(Mutex::new(next_node)));
-            } else {
-                current_node = current_node_lock.get_rule(note);
-            }
 
+    // Create nodes for each pattern 
+    for pattern in note_patterns {
+        let mut current_node = root.clone();
+        for note in pattern {
+            let next_node = {  // New scope to ensure lock is dropped
+                let mut current_node_lock = current_node.lock().unwrap();
+                
+                if current_node_lock.get_rule(note).is_none() {
+                    let next_node = Node::new(note);
+                    current_node_lock.add_rule(note, Arc::new(Mutex::new(next_node)));
+                }
+                
+                // Get the next node while we still have the lock
+                current_node_lock.get_rule(note).unwrap().clone()
+            }; // Lock is dropped here
+            
+            // Now we can safely assign to current_node
+            current_node = next_node;
         }
     }
-    */
+
+
+    
 
     // Initialize MIDI input
     let midi_in = MidiInput::new("midi-synthesizer")?;
