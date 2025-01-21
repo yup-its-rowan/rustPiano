@@ -6,6 +6,8 @@ use std::error::Error;
 use std::time::Duration;
 use std::thread;
 
+mod popup;
+
 struct SynthState {
     synthesizer: Mutex<Synthesizer>,
     running: Arc<AtomicBool>,
@@ -218,6 +220,7 @@ fn interpret_note(working_nodes: Arc<Mutex<Vec<Arc<Mutex<Node>>>>>, root: Arc<Mu
         if node_locked.get_rule(note).is_some() {
             if node_locked.get_rule(note).unwrap().lock().unwrap().empty_rulemap() {
                 println!("Note: {}", node_locked.get_rule(note).unwrap().lock().unwrap().get_value());
+                //let _ = popup::show_image_popup("src/freddy.png", "Freddy...");
             } else {
                 new_working_nodes.push(node_locked.get_rule(note).unwrap().clone());
             }
