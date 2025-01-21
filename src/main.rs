@@ -225,7 +225,7 @@ fn interpret_note(working_nodes: Arc<Mutex<Vec<Arc<Mutex<Node>>>>>, root: Arc<Mu
     }
     let root_locked = root.lock().unwrap();
     if root_locked.get_rule(note).is_some() {
-        if (root_locked.get_rule(note).unwrap().lock().unwrap().empty_rulemap()) {
+        if root_locked.get_rule(note).unwrap().lock().unwrap().empty_rulemap() {
             println!("Note: {}", root_locked.get_rule(note).unwrap().lock().unwrap().get_value());
         } else {
             new_working_nodes.push(root_locked.get_rule(note).unwrap().clone());
