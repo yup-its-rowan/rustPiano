@@ -37,6 +37,14 @@ impl Node {
     fn get_rule(&self, rule: i32) -> Option<&Arc<Mutex<Node>>> {
         self.rulemap.get(&rule)
     }
+
+    fn get_value(&self) -> i32 {
+        self.value
+    }
+
+    fn empty_rulemap(&self) -> bool {
+        self.rulemap.is_empty()
+    }
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -157,6 +165,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         }
                         
                         synth.note_on(0, message[1] as i32, custom_velocity);
+                        interpret_note(Arc::clone(&nodes), Arc::clone(&root), message[1] as i32);
                     } else {
                         synth.note_off(0, message[1] as i32);
                     }
@@ -207,12 +216,20 @@ fn interpret_note(working_nodes: Arc<Mutex<Vec<Arc<Mutex<Node>>>>>, root: Arc<Mu
     for i in 0..number_of_nodes {
         let node_locked = working_nodes_lock[i].lock().unwrap();
         if node_locked.get_rule(note).is_some() {
-            new_working_nodes.push(node_locked.get_rule(note).unwrap().clone());
+            if node_locked.get_rule(note).unwrap().lock().unwrap().empty_rulemap() {
+                println!("Note: {}", node_locked.get_rule(note).unwrap().lock().unwrap().get_value());
+            } else {
+                new_working_nodes.push(node_locked.get_rule(note).unwrap().clone());
+            }
         }
     }
     let root_locked = root.lock().unwrap();
     if root_locked.get_rule(note).is_some() {
-        new_working_nodes.push(root_locked.get_rule(note).unwrap().clone());
+        if (root_locked.get_rule(note).unwrap().lock().unwrap().empty_rulemap()) {
+            println!("Note: {}", root_locked.get_rule(note).unwrap().lock().unwrap().get_value());
+        } else {
+            new_working_nodes.push(root_locked.get_rule(note).unwrap().clone());
+        }
     }
     *working_nodes_lock = new_working_nodes;
 }
