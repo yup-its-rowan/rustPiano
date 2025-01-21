@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         vec![60, 60, 61],
     ];
 
-    let nodes: Vec<Node> = Vec::new();
+    let nodes: Arc<Mutex<Vec<Arc<Mutex<Node>>>>> = Arc::new(Mutex::new(Vec::new()));
     let root = Arc::new(Mutex::new(Node::new(-1)));
     
 
@@ -69,8 +69,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             
             // Now we can safely assign to current_node
             current_node = next_node;
-        }
-        
+        }        
     }
 
 
@@ -199,4 +198,21 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Shutdown complete.");
 
     Ok(())
+}
+
+fn interpret_note(working_nodes: Arc<Mutex<Vec<Arc<Mutex<Node>>>>>, root: Arc<Mutex<Node>>, note: i32) {
+    let mut working_nodes_lock = working_nodes.lock().unwrap();
+    let mut new_working_nodes: Vec<Arc<Mutex<Node>>> = Vec::new();
+    let number_of_nodes = working_nodes_lock.len();
+    for i in 0..number_of_nodes {
+        let node_locked = working_nodes_lock[i].lock().unwrap();
+        if node_locked.get_rule(note).is_some() {
+            new_working_nodes.push(node_locked.get_rule(note).unwrap().clone());
+        }
+    }
+    let root_locked = root.lock().unwrap();
+    if root_locked.get_rule(note).is_some() {
+        new_working_nodes.push(root_locked.get_rule(note).unwrap().clone());
+    }
+    *working_nodes_lock = new_working_nodes;
 }
