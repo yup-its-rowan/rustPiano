@@ -166,8 +166,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         let mut custom_velocity = message[2] as i32 * 2.3 as i32;
                         if custom_velocity > 127 {
                             custom_velocity = 127;
-                        }
-                        
+                        }  
                         synth.note_on(0, message[1] as i32, custom_velocity);
                         interpret_note(Arc::clone(&nodes), Arc::clone(&root), message[1] as i32);
                     } else {
@@ -239,20 +238,18 @@ fn interpret_note(working_nodes: Arc<Mutex<Vec<Arc<Mutex<Node>>>>>, root: Arc<Mu
 }
 
 fn successful_pattern(note: i32) {
-    println!("Note: {}", note);
-    let popup_window = popup::main();
+    //println!("Note: {}", note);
+    let _ = popup::main(get_string(note));
 }
 
-/* 
-pub fn start_popup(note: i32) -> ImagePopup {
-    let popup;
+
+fn get_string(note: i32) -> String {
     if note == -2 {
-        popup = ImagePopup::new("src/freddy.png".to_string());
+        return "src/freddy.png".to_string();
     } else if note == -3 {
-        popup = ImagePopup::new("src/snoopyChristmas.gif".to_string());
+        return "src/snoopyChristmas.gif".to_string();
     } else {
-        popup = ImagePopup::new("src/cheese.cheese".to_string());
+        return "src/cheese.cheese".to_string();
     }
-    return popup;
 }
-    */
+    

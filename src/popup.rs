@@ -1,19 +1,15 @@
-use std::fs::File;
-use std::io::{BufReader, BufWriter, Read, Write};
-use std::path::Path;
+use image::{GenericImageView, ImageReader};
 
 use show_image::{ImageView, ImageInfo, create_window};
 
 
-pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+pub fn main(path: String) -> Result<(), Box<dyn std::error::Error>> {
+    let image = ImageReader::open(path)?.decode()?;
+    
+    let pixel_data: Vec<u8> = image.to_rgb8().into_raw();
+    let dimensions = image.dimensions();
 
-    let file = File::open(Path::new("src/freddy.png")).unwrap();
-    let mut reader = std::io::BufReader::new(file);
-    let mut pixel_data: Vec<u8> = Vec::new();
-    reader.read_to_end(&mut pixel_data).unwrap();
-
-
-    let image = ImageView::new(ImageInfo::rgb8(1920, 1080), &pixel_data);
+    let image = ImageView::new(ImageInfo::rgb8(dimensions.0, dimensions.1), &pixel_data);
 
     // Create a window with default options and display the image.
     let window = create_window("image", Default::default())?;
