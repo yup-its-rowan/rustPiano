@@ -53,8 +53,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // initialize note patterns
     let note_patterns = vec![
-        vec![80, 81, 82],
-        vec![60, 60, 61],
+        vec![80, 81, 82, -2],
+        vec![60, 60, 61, -3],
     ];
 
     let nodes: Arc<Mutex<Vec<Arc<Mutex<Node>>>>> = Arc::new(Mutex::new(Vec::new()));
@@ -64,12 +64,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Create nodes for each pattern 
     for pattern in note_patterns {
         let mut current_node = root.clone();
-        for note in pattern {
+        let pattern_len = pattern.len()-1;
+        for i in 0..pattern_len {
+            let note = pattern[i];
             let next_node = {  // New scope to ensure lock is dropped
                 let mut current_node_lock = current_node.lock().unwrap();
                 
                 if current_node_lock.get_rule(note).is_none() {
-                    let next_node = Node::new(note);
+                    let next_node = Node::new(pattern[pattern_len-1]);
                     current_node_lock.add_rule(note, Arc::new(Mutex::new(next_node)));
                 }
                 
@@ -162,7 +164,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 0x90 => { // Note On
                     if message[2] > 0 {
                         let mut custom_velocity = message[2] as i32 * 2.3 as i32;
-                        if (custom_velocity > 127) {
+                        if custom_velocity > 127 {
                             custom_velocity = 127;
                         }
                         
@@ -219,8 +221,7 @@ fn interpret_note(working_nodes: Arc<Mutex<Vec<Arc<Mutex<Node>>>>>, root: Arc<Mu
         let node_locked = working_nodes_lock[i].lock().unwrap();
         if node_locked.get_rule(note).is_some() {
             if node_locked.get_rule(note).unwrap().lock().unwrap().empty_rulemap() {
-                println!("Note: {}", node_locked.get_rule(note).unwrap().lock().unwrap().get_value());
-                //let _ = popup::show_image_popup("src/freddy.png", "Freddy...");
+                successful_pattern(node_locked.get_rule(note).unwrap().lock().unwrap().get_value());
             } else {
                 new_working_nodes.push(node_locked.get_rule(note).unwrap().clone());
             }
@@ -229,10 +230,17 @@ fn interpret_note(working_nodes: Arc<Mutex<Vec<Arc<Mutex<Node>>>>>, root: Arc<Mu
     let root_locked = root.lock().unwrap();
     if root_locked.get_rule(note).is_some() {
         if root_locked.get_rule(note).unwrap().lock().unwrap().empty_rulemap() {
-            println!("Note: {}", root_locked.get_rule(note).unwrap().lock().unwrap().get_value());
+            successful_pattern(root_locked.get_rule(note).unwrap().lock().unwrap().get_value());
         } else {
             new_working_nodes.push(root_locked.get_rule(note).unwrap().clone());
         }
     }
     *working_nodes_lock = new_working_nodes;
+}
+
+fn successful_pattern(note: i32) {
+    println!("Note: {}", note);
+    let popup_window = popup::start_popup(-2);
+    let handle = popup_window.launch();
+    handle.join().unwrap();
 }

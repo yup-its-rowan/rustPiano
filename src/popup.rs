@@ -1,83 +1,87 @@
-use winit::{
-    event::{Event, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
-};
-use image::GenericImageView;
-use pixels::{Pixels, SurfaceTexture};
-use winit::window::{Window, WindowBuilder};
+use eframe::egui;
+use std::sync::{Arc, Mutex};
+use std::thread;
 
-struct ImageWindow {
-    window: Window,
-    pixels: Pixels,
-    image_data: Vec<u8>,
-    width: u32,
-    height: u32,
+pub struct ImagePopup {
+    // State for the popup window
+    is_open: Arc<Mutex<bool>>,
+    image_path: String,
 }
 
-
-pub fn show_image_popup(image_path: &str, popup_title: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let event_loop = EventLoop::new();
-    
-    // Load the image
-    let image = image::open(image_path)?;
-    let (width, height) = image.dimensions();
-    
-    // Create the window
-    let window = WindowBuilder::new()
-        .with_title(popup_title)
-        .with_inner_size(winit::dpi::LogicalSize::new(width, height))
-        .with_decorations(true)   // Set to false if you don't want window borders
-        .build(&event_loop)?;
-
-    // Create pixel buffer
-    let surface_texture = SurfaceTexture::new(width, height, &window);
-    let pixels = Pixels::new(width, height, surface_texture)?;
-    
-    // Convert image to RGBA
-    let image_rgba = image.into_rgba8();
-    let image_data = image_rgba.into_raw();
-    
-    let mut image_window = ImageWindow {
-        window,
-        pixels,
-        image_data,
-        width,
-        height,
-    };
-    
-    event_loop.run(move |event, _, control_flow| {
-        match event {
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => {
-                *control_flow = ControlFlow::Exit;
-            }
-            Event::RedrawRequested(_) => {
-                draw_image(&mut image_window);
-            }
-            Event::MainEventsCleared => {
-                image_window.window.request_redraw();
-            }
-            _ => {}
+impl ImagePopup {
+    /// Create a new ImagePopup instance
+    pub fn new(image_path: String) -> Self {
+        Self {
+            is_open: Arc::new(Mutex::new(false)),
+            image_path,
         }
-    });
+    }
+
+    /// Launch the popup window in a separate thread
+    pub fn launch(&self) -> thread::JoinHandle<()> {
+        // Clone the arc references to move into the thread
+        let is_open_clone = Arc::clone(&self.is_open);
+        let image_path_clone = self.image_path.clone();
+
+        thread::spawn(move || {
+            let options = eframe::NativeOptions {
+                viewport: egui::ViewportBuilder::default()
+                    .with_inner_size([400.0, 300.0])
+                    .with_decorations(true)
+                    .with_resizable(true),
+                ..Default::default()
+            };
+
+            let _ = eframe::run_native(
+                "Image Popup",
+                options,
+                Box::new(|_cc| -> Box<dyn eframe::App> {
+                    Box::new(PopupApp {
+                        is_open: is_open_clone,
+                        image_path: image_path_clone,
+                    })
+                }),
+            );
+        })
+    }
+
+    /// Check if the popup is currently open
+    pub fn is_open(&self) -> bool {
+        *self.is_open.lock().unwrap()
+    }
+
+    /// Close the popup window
+    pub fn close(&self) {
+        *self.is_open.lock().unwrap() = false;
+    }
 }
 
-fn draw_image(image_window: &mut ImageWindow) {
-    let frame = image_window.pixels.frame_mut();
-    
-    for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
-        let x = (i % image_window.width as usize) * 4;
-        let y = (i / image_window.width as usize) * 4;
-        let index = y * image_window.width as usize + x;
-        
-        if index + 3 < image_window.image_data.len() {
-            pixel.copy_from_slice(&image_window.image_data[index..index + 4]);
-        }
+// Internal application struct for egui
+struct PopupApp {
+    is_open: Arc<Mutex<bool>>,
+    image_path: String,
+}
+
+impl eframe::App for PopupApp {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            // Load and display the image
+            ui.image(&self.image_path);
+        });
+
+        // Update the open state
+        *self.is_open.lock().unwrap() = true;
     }
-    
-    if let Err(err) = image_window.pixels.render() {
-        eprintln!("Error rendering pixels: {}", err);
+}
+
+pub fn start_popup(note: i32) -> ImagePopup {
+    let popup;
+    if note == -2 {
+        popup = ImagePopup::new("src/freddy.png".to_string());
+    } else if note == -3 {
+        popup = ImagePopup::new("src/snoopyChristmas.gif".to_string());
+    } else {
+        popup = ImagePopup::new("src/cheese.cheese".to_string());
     }
+    return popup;
 }
