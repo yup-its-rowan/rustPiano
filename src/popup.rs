@@ -1,87 +1,23 @@
-use eframe::egui;
-use std::sync::{Arc, Mutex};
-use std::thread;
+use std::fs::File;
+use std::io::{BufReader, BufWriter, Read, Write};
+use std::path::Path;
 
-pub struct ImagePopup {
-    // State for the popup window
-    is_open: Arc<Mutex<bool>>,
-    image_path: String,
-}
+use show_image::{ImageView, ImageInfo, create_window};
 
-impl ImagePopup {
-    /// Create a new ImagePopup instance
-    pub fn new(image_path: String) -> Self {
-        Self {
-            is_open: Arc::new(Mutex::new(false)),
-            image_path,
-        }
-    }
 
-    /// Launch the popup window in a separate thread
-    pub fn launch(&self) -> thread::JoinHandle<()> {
-        // Clone the arc references to move into the thread
-        let is_open_clone = Arc::clone(&self.is_open);
-        let image_path_clone = self.image_path.clone();
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
-        thread::spawn(move || {
-            let options = eframe::NativeOptions {
-                viewport: egui::ViewportBuilder::default()
-                    .with_inner_size([400.0, 300.0])
-                    .with_decorations(true)
-                    .with_resizable(true),
-                ..Default::default()
-            };
+    let file = File::open(Path::new("src/freddy.png")).unwrap();
+    let mut reader = std::io::BufReader::new(file);
+    let mut pixel_data: Vec<u8> = Vec::new();
+    reader.read_to_end(&mut pixel_data).unwrap();
 
-            let _ = eframe::run_native(
-                "Image Popup",
-                options,
-                Box::new(|_cc| -> Box<dyn eframe::App> {
-                    Box::new(PopupApp {
-                        is_open: is_open_clone,
-                        image_path: image_path_clone,
-                    })
-                }),
-            );
-        })
-    }
 
-    /// Check if the popup is currently open
-    pub fn is_open(&self) -> bool {
-        *self.is_open.lock().unwrap()
-    }
+    let image = ImageView::new(ImageInfo::rgb8(1920, 1080), &pixel_data);
 
-    /// Close the popup window
-    pub fn close(&self) {
-        *self.is_open.lock().unwrap() = false;
-    }
-}
+    // Create a window with default options and display the image.
+    let window = create_window("image", Default::default())?;
+    window.set_image("image-001", image)?;
 
-// Internal application struct for egui
-struct PopupApp {
-    is_open: Arc<Mutex<bool>>,
-    image_path: String,
-}
-
-impl eframe::App for PopupApp {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            // Load and display the image
-            ui.image(&self.image_path);
-        });
-
-        // Update the open state
-        *self.is_open.lock().unwrap() = true;
-    }
-}
-
-pub fn start_popup(note: i32) -> ImagePopup {
-    let popup;
-    if note == -2 {
-        popup = ImagePopup::new("src/freddy.png".to_string());
-    } else if note == -3 {
-        popup = ImagePopup::new("src/snoopyChristmas.gif".to_string());
-    } else {
-        popup = ImagePopup::new("src/cheese.cheese".to_string());
-    }
-    return popup;
+    Ok(())
 }

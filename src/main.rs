@@ -48,7 +48,7 @@ impl Node {
         self.rulemap.is_empty()
     }
 }
-
+#[show_image::main]
 fn main() -> Result<(), Box<dyn Error>> {
 
     // initialize note patterns
@@ -240,7 +240,19 @@ fn interpret_note(working_nodes: Arc<Mutex<Vec<Arc<Mutex<Node>>>>>, root: Arc<Mu
 
 fn successful_pattern(note: i32) {
     println!("Note: {}", note);
-    let popup_window = popup::start_popup(-2);
-    let handle = popup_window.launch();
-    handle.join().unwrap();
+    let popup_window = popup::main();
 }
+
+/* 
+pub fn start_popup(note: i32) -> ImagePopup {
+    let popup;
+    if note == -2 {
+        popup = ImagePopup::new("src/freddy.png".to_string());
+    } else if note == -3 {
+        popup = ImagePopup::new("src/snoopyChristmas.gif".to_string());
+    } else {
+        popup = ImagePopup::new("src/cheese.cheese".to_string());
+    }
+    return popup;
+}
+    */
