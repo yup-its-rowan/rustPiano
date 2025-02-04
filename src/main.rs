@@ -1,7 +1,7 @@
 use midir::MidiInput;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use rustysynth::{SoundFont, Synthesizer, SynthesizerSettings};
-use std::{collections::HashMap, fs::File, sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}};
+use std::{collections::HashMap, fs::File, io::Cursor, sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}};
 use std::error::Error;
 use std::time::Duration;
 use std::thread;
@@ -48,7 +48,7 @@ impl Node {
         self.rulemap.is_empty()
     }
 }
-#[show_image::main]
+
 fn main() -> Result<(), Box<dyn Error>> {
 
     // initialize note patterns
@@ -95,7 +95,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
 
     // Load SoundFont and initialize synthesizer
-    let mut sf2 = File::open("src/piano.sf2").unwrap();
+    let mut sf2 = Box::new(Cursor::new(include_bytes!("piano.sf2")));
     let sound_font = Arc::new(SoundFont::new(&mut sf2).unwrap());
     let settings = SynthesizerSettings::new(44100);
     let synthesizer = Synthesizer::new(&sound_font, &settings)?;
@@ -238,17 +238,24 @@ fn interpret_note(working_nodes: Arc<Mutex<Vec<Arc<Mutex<Node>>>>>, root: Arc<Mu
 
 fn successful_pattern(note: i32) {
     //println!("Note: {}", note);
-    let _ = popup::main(get_string(note));
+    let handle = std::thread::spawn(move || {
+        if let Err(e) = popup::main(get_string(note)) {
+            eprintln!("Error: {}", e);
+        }
+    });
+    handle.join().unwrap();
 }
 
+const FREDDY: &[u8] = include_bytes!("freddy.png");
+const SNOOPY: &[u8] = include_bytes!("snoopyChristmas.gif");
 
-fn get_string(note: i32) -> String {
+fn get_string(note: i32) -> &'static [u8] {
     if note == -2 {
-        return "src/freddy.png".to_string();
+        return FREDDY;
     } else if note == -3 {
-        return "src/snoopyChristmas.gif".to_string();
+        return SNOOPY;
     } else {
-        return "src/cheese.cheese".to_string();
+        return SNOOPY;
     }
 }
     
