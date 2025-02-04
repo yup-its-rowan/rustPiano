@@ -71,7 +71,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 let mut current_node_lock = current_node.lock().unwrap();
                 
                 if current_node_lock.get_rule(note).is_none() {
-                    let next_node = Node::new(pattern[pattern_len-1]);
+                    let next_node = Node::new(pattern[pattern_len]);
                     current_node_lock.add_rule(note, Arc::new(Mutex::new(next_node)));
                 }
                 
@@ -83,7 +83,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             current_node = next_node;
         }        
     }
-
 
     
 
