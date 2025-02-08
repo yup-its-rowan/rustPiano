@@ -31,13 +31,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   std::mt19937 generator(rd()); 
 
   // Define a distribution
-  std::uniform_int_distribution<int> distributionX(0, (int) GetSystemMetrics(SM_CXSCREEN)/2);
-  std::uniform_int_distribution<int> distributionY(0, (int) GetSystemMetrics(SM_CYSCREEN)/2);
+  std::uniform_int_distribution<int> distributionX(0, (int) 2*GetSystemMetrics(SM_CXSCREEN)/3);
+  std::uniform_int_distribution<int> distributionY(0, (int) 2*GetSystemMetrics(SM_CYSCREEN)/3);
 
 
   Win32Window::Point origin(distributionX(generator), distributionY(generator));
-  Win32Window::Size size(900, 900);
-  if (!window.Create(L"Har Har HarHar Har...", origin, size)) {
+  Win32Window::Size size(660, 880);
+  if (!window.Create(L"esnupi", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);
