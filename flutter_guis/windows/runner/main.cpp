@@ -36,8 +36,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
 
   Win32Window::Point origin(distributionX(generator), distributionY(generator));
-  Win32Window::Size size(660, 880);
-  if (!window.Create(L"esnupi", origin, size)) {
+  Win32Window::Size size(900, 900);
+  if (!window.Create(L"Har Har HarHar Har", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);
