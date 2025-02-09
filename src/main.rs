@@ -194,24 +194,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         (),
     )?;
 
-    // Create a clone for shutdown function
-    let synth_state_shutdown = Arc::clone(&synth_state);
-    
-    // Spawn a thread to handle shutdown command
-    thread::spawn(move || {
-        println!("Press 'q' and Enter to quit...");
-        loop {
-            let mut input = String::new();
-            if let Ok(_) = std::io::stdin().read_line(&mut input) {
-                if input.trim().to_lowercase() == "q" {
-                    println!("Shutting down...");
-                    synth_state_shutdown.shutdown();
-                    break;
-                }
-            }
-        }
-    });
-
     // Main thread waits for shutdown signal
     while synth_state.running.load(Ordering::SeqCst) {
         thread::sleep(Duration::from_millis(100));
@@ -259,19 +241,19 @@ fn run_program(note: i32) {
     if note == -2 {
         let _ = {
             Command::new("powershell")
-                .args(&["src/popupExe/freddy/flutter_guis.exe"])
+                .args(&["C:/IdeaProjects/rustPiano/src/popupExe/freddy/flutter_guis.exe"])
                 .spawn()
         };
     } else if note == -3 {
         let _ = {
             Command::new("powershell")
-                .args(&["src/popupExe/snoopy/flutter_guis.exe"])
+                .args(&["C:/IdeaProjects/rustPiano/src/popupExe/snoopy/flutter_guis.exe"])
                 .spawn()
         };
     } else {
         let _ = {
             Command::new("powershell")
-                .args(&["src/popupExe/freddy/flutter_guis.exe"])
+                .args(&["C:/IdeaProjects/rustPiano/src/popupExe/freddy/flutter_guis.exe"])
                 .spawn()
         };
     }
