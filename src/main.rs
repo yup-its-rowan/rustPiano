@@ -49,6 +49,9 @@ impl Node {
 
 fn main() -> Result<(), Box<dyn Error>> {
 
+    const LOUD: bool = false;
+    const PATTERN: bool = true;
+
     // initialize note patterns
     let note_patterns = vec![
         vec![96, 95, 96, 95, -2],
@@ -119,6 +122,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         running: Arc::clone(&running),
     });
 
+    
     // Initialize audio output
     let host = cpal::default_host();
     let device = host.default_output_device()
@@ -158,8 +162,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         move |err| eprintln!("Audio stream error: {}", err),
         Some(Duration::from_micros(500))
     )?;
-
-    stream.play()?;
+    if LOUD {
+        stream.play()?;
+    }
 
     // Set up MIDI input callback
     let synth_state_midi = Arc::clone(&synth_state);
@@ -180,7 +185,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                             custom_velocity = 127;
                         }  
                         synth.note_on(0, message[1] as i32, custom_velocity);
-                        interpret_note(Arc::clone(&nodes), Arc::clone(&root), message[1] as i32);
+                        if PATTERN {
+                            interpret_note(Arc::clone(&nodes), Arc::clone(&root), message[1] as i32);
+                        }
                     } else {
                         synth.note_off(0, message[1] as i32);
                     }
