@@ -1,12 +1,10 @@
 use midir::MidiInput;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use rustysynth::{SoundFont, Synthesizer, SynthesizerSettings};
-use std::{collections::HashMap, fs::File, io::Cursor, sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}};
+use std::{collections::HashMap, io::Cursor, process::Command, sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}};
 use std::error::Error;
 use std::time::Duration;
 use std::thread;
-
-mod popup;
 
 struct SynthState {
     synthesizer: Mutex<Synthesizer>,
@@ -53,8 +51,22 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // initialize note patterns
     let note_patterns = vec![
-        vec![80, 81, 82, -2],
-        vec![60, 60, 61, -3],
+        vec![96, 95, 96, 95, -2],
+        vec![64, 64, 64, 64, 64, 64, 64, 67, 60, 62, 64, -3],
+        vec![64, 64, 64, 64, 64, 64, 64, 67, 60, 62, 64, 65, -3],
+        vec![64, 64, 64, 64, 64, 64, 64, 67, 60, 62, 64, 65, 65, -3],
+        vec![64, 64, 64, 64, 64, 64, 64, 67, 60, 62, 64, 65, 65, 65, -3],
+        vec![64, 64, 64, 64, 64, 64, 64, 67, 60, 62, 64, 65, 65, 65, 65, -3],
+        vec![64, 64, 64, 64, 64, 64, 64, 67, 60, 62, 64, 65, 65, 65, 65, 65, -3],
+        vec![64, 64, 64, 64, 64, 64, 64, 67, 60, 62, 64, 65, 65, 65, 65, 65, 64, -3],
+        vec![64, 64, 64, 64, 64, 64, 64, 67, 60, 62, 64, 65, 65, 65, 65, 65, 64, 64, -3],
+        vec![64, 64, 64, 64, 64, 64, 64, 67, 60, 62, 64, 65, 65, 65, 65, 65, 64, 64, 64, -3],
+        vec![64, 64, 64, 64, 64, 64, 64, 67, 60, 62, 64, 65, 65, 65, 65, 65, 64, 64, 64, 64, -3],
+        vec![64, 64, 64, 64, 64, 64, 64, 67, 60, 62, 64, 65, 65, 65, 65, 65, 64, 64, 64, 64, 62, -3],
+        vec![64, 64, 64, 64, 64, 64, 64, 67, 60, 62, 64, 65, 65, 65, 65, 65, 64, 64, 64, 64, 62, 62, -3],
+        vec![64, 64, 64, 64, 64, 64, 64, 67, 60, 62, 64, 65, 65, 65, 65, 65, 64, 64, 64, 64, 62, 62, 64, -3],
+        vec![64, 64, 64, 64, 64, 64, 64, 67, 60, 62, 64, 65, 65, 65, 65, 65, 64, 64, 64, 64, 62, 62, 64, 62, -3],
+        vec![64, 64, 64, 64, 64, 64, 64, 67, 60, 62, 64, 65, 65, 65, 65, 65, 64, 64, 64, 64, 62, 62, 64, 62, 67, -3],
     ];
 
     let nodes: Arc<Mutex<Vec<Arc<Mutex<Node>>>>> = Arc::new(Mutex::new(Vec::new()));
@@ -81,7 +93,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             
             // Now we can safely assign to current_node
             current_node = next_node;
-        }        
+        }
+        current_node.lock().unwrap().add_rule(-1, Arc::new(Mutex::new(Node::new(pattern[pattern_len]))));
     }
 
     
@@ -218,44 +231,49 @@ fn interpret_note(working_nodes: Arc<Mutex<Vec<Arc<Mutex<Node>>>>>, root: Arc<Mu
     for i in 0..number_of_nodes {
         let node_locked = working_nodes_lock[i].lock().unwrap();
         if node_locked.get_rule(note).is_some() {
-            if node_locked.get_rule(note).unwrap().lock().unwrap().empty_rulemap() {
+            if node_locked.get_rule(note).unwrap().lock().unwrap().get_rule(-1).is_some() {
                 successful_pattern(node_locked.get_rule(note).unwrap().lock().unwrap().get_value());
-            } else {
-                new_working_nodes.push(node_locked.get_rule(note).unwrap().clone());
             }
+            new_working_nodes.push(node_locked.get_rule(note).unwrap().clone());
         }
     }
     let root_locked = root.lock().unwrap();
     if root_locked.get_rule(note).is_some() {
-        if root_locked.get_rule(note).unwrap().lock().unwrap().empty_rulemap() {
+        if root_locked.get_rule(note).unwrap().lock().unwrap().get_rule(-1).is_some() {
             successful_pattern(root_locked.get_rule(note).unwrap().lock().unwrap().get_value());
-        } else {
-            new_working_nodes.push(root_locked.get_rule(note).unwrap().clone());
         }
+        new_working_nodes.push(root_locked.get_rule(note).unwrap().clone());
     }
     *working_nodes_lock = new_working_nodes;
 }
 
 fn successful_pattern(note: i32) {
     //println!("Note: {}", note);
-    let handle = std::thread::spawn(move || {
-        if let Err(e) = popup::main(get_string(note)) {
-            eprintln!("Error: {}", e);
-        }
-    });
-    handle.join().unwrap();
+    run_program(note);
 }
 
-const FREDDY: &[u8] = include_bytes!("freddy.png");
-const SNOOPY: &[u8] = include_bytes!("snoopyChristmas.gif");
+//const FREDDY: &[u8] = include_bytes!("freddy.png");
+//const SNOOPY: &[u8] = include_bytes!("snoopyChristmas.gif");
 
-fn get_string(note: i32) -> &'static [u8] {
+fn run_program(note: i32) {
     if note == -2 {
-        return FREDDY;
+        let _ = {
+            Command::new("powershell")
+                .args(&["src/popupExe/freddy/flutter_guis.exe"])
+                .spawn()
+        };
     } else if note == -3 {
-        return SNOOPY;
+        let _ = {
+            Command::new("powershell")
+                .args(&["src/popupExe/snoopy/flutter_guis.exe"])
+                .spawn()
+        };
     } else {
-        return SNOOPY;
+        let _ = {
+            Command::new("powershell")
+                .args(&["src/popupExe/freddy/flutter_guis.exe"])
+                .spawn()
+        };
     }
 }
     
