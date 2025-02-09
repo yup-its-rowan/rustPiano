@@ -1,11 +1,10 @@
 use midir::MidiInput;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use rustysynth::{SoundFont, Synthesizer, SynthesizerSettings};
-use std::{collections::HashMap, io::{Cursor, Write}, process::Command, sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}};
+use std::{collections::HashMap, io::Cursor, process::Command, sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}};
 use std::error::Error;
 use std::time::Duration;
 use std::thread;
-use tempfile::NamedTempFile;
 
 struct SynthState {
     synthesizer: Mutex<Synthesizer>,
@@ -48,12 +47,6 @@ impl Node {
     }
 }
 
-
-use std::sync::LazyLock;
-
-static FREDDY_EXE_PATH: LazyLock<Arc<Mutex<String>>> = LazyLock::new(|| Arc::new(Mutex::new(String::from("src/popupExe/freddy/flutter_guis.exe"))));
-static SNOOPY_EXE_PATH: LazyLock<Arc<Mutex<String>>> = LazyLock::new(|| Arc::new(Mutex::new(String::from("src/popupExe/snoopy/flutter_guis.exe"))));
-
 fn main() -> Result<(), Box<dyn Error>> {
 
     // initialize note patterns
@@ -78,20 +71,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let nodes: Arc<Mutex<Vec<Arc<Mutex<Node>>>>> = Arc::new(Mutex::new(Vec::new()));
     let root = Arc::new(Mutex::new(Node::new(-1)));
-
-    let freddy_exe_bytes = include_bytes!("popupExe/freddy/flutter_guis.exe");
-    let snoopy_exe_bytes = include_bytes!("popupExe/snoopy/flutter_guis.exe");
-
-    let mut temp_freddy_file = NamedTempFile::new().unwrap();
-    temp_freddy_file.write_all(freddy_exe_bytes).unwrap();
-    let mut temp_snoopy_file = NamedTempFile::new().unwrap();
-    temp_snoopy_file.write_all(snoopy_exe_bytes).unwrap();
-
-    let freddy_exe_path = temp_freddy_file.path().to_str().unwrap().to_string();
-    let snoopy_exe_path = temp_snoopy_file.path().to_str().unwrap().to_string();
-
-    *FREDDY_EXE_PATH.lock().unwrap() = freddy_exe_path.clone();
-    *SNOOPY_EXE_PATH.lock().unwrap() = snoopy_exe_path.clone();
+    
 
     // Create nodes for each pattern 
     for pattern in note_patterns {
@@ -214,6 +194,24 @@ fn main() -> Result<(), Box<dyn Error>> {
         (),
     )?;
 
+    // Create a clone for shutdown function
+    let synth_state_shutdown = Arc::clone(&synth_state);
+    
+    // Spawn a thread to handle shutdown command
+    thread::spawn(move || {
+        println!("Press 'q' and Enter to quit...");
+        loop {
+            let mut input = String::new();
+            if let Ok(_) = std::io::stdin().read_line(&mut input) {
+                if input.trim().to_lowercase() == "q" {
+                    println!("Shutting down...");
+                    synth_state_shutdown.shutdown();
+                    break;
+                }
+            }
+        }
+    });
+
     // Main thread waits for shutdown signal
     while synth_state.running.load(Ordering::SeqCst) {
         thread::sleep(Duration::from_millis(100));
@@ -254,11 +252,14 @@ fn successful_pattern(note: i32) {
     run_program(note);
 }
 
+//const FREDDY: &[u8] = include_bytes!("freddy.png");
+//const SNOOPY: &[u8] = include_bytes!("snoopyChristmas.gif");
+
 fn run_program(note: i32) {
     if note == -2 {
         let _ = {
             Command::new("powershell")
-                .args(&["src/popupExe/snoopy/flutter_guis.exe"])
+                .args(&["src/popupExe/freddy/flutter_guis.exe"])
                 .spawn()
         };
     } else if note == -3 {
